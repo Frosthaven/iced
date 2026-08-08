@@ -184,6 +184,16 @@ impl SctkEventLoop {
                                     seat.set_cursor(&state.connection, icon);
                                 }
                             }
+                            crate::platform_specific::Action::SetCursorVisible(
+                                visible,
+                            ) => {
+                                if let Some(seat) = state.seats.get_mut(0) {
+                                    seat.set_cursor_visible(
+                                        &state.connection,
+                                        visible,
+                                    );
+                                }
+                            }
                             crate::platform_specific::Action::RequestRedraw(
                                 id,
                             ) => {

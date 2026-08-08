@@ -31,7 +31,15 @@ impl PointerHandler for SctkState {
 
         // track events, but only forward for the active seat
         for e in events {
-            if my_seat.active_icon != my_seat.icon {
+            if my_seat.hidden {
+                // A hidden pointer has to be re-hidden on every enter: the
+                // compositor restores its own cursor image then, and the
+                // enter serial the hide request needs only exists from that
+                // point on.
+                if matches!(e.kind, PointerEventKind::Enter { .. }) {
+                    my_seat.hide_cursor();
+                }
+            } else if my_seat.active_icon != my_seat.icon {
                 // Restore cursor that was set by appliction, or default
                 my_seat.set_cursor(
                     conn,

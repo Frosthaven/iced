@@ -92,7 +92,7 @@ impl winit::window::Window for SctkWinitWindow {
     }
 
     fn set_cursor_visible(&self, visible: bool) {
-        // TODO
+        _ = self.tx.send(Action::SetCursorVisible(visible));
     }
 
     fn surface_size(&self) -> winit::dpi::PhysicalSize<u32> {

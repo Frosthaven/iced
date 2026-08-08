@@ -139,13 +139,44 @@ pub(crate) struct SctkSeat {
     pub(crate) active_icon: Option<CursorIcon>,
     // Cursor icon set by application
     pub(crate) icon: Option<CursorIcon>,
+    // Pointer hidden by the application (`Window::set_cursor_visible(false)`).
+    // Outranks `icon`: while this is set no icon is applied to the seat.
+    pub(crate) hidden: bool,
 }
 
 impl SctkSeat {
     pub(crate) fn set_cursor(&mut self, conn: &Connection, icon: CursorIcon) {
+        if self.hidden {
+            return;
+        }
         if let Some(ptr) = self.ptr.as_ref() {
             _ = ptr.set_cursor(conn, icon);
             self.active_icon = Some(icon);
+        }
+    }
+
+    /// Hide the pointer on this seat.
+    ///
+    /// Fails silently when the seat has no enter serial yet (the pointer is
+    /// not over one of our surfaces); the next enter re-applies it.
+    pub(crate) fn hide_cursor(&mut self) {
+        if let Some(ptr) = self.ptr.as_ref() {
+            _ = ptr.hide_cursor();
+            self.active_icon = None;
+        }
+    }
+
+    pub(crate) fn set_cursor_visible(
+        &mut self,
+        conn: &Connection,
+        visible: bool,
+    ) {
+        self.hidden = !visible;
+        if visible {
+            let icon = self.icon.unwrap_or(CursorIcon::Default);
+            self.set_cursor(conn, icon);
+        } else {
+            self.hide_cursor();
         }
     }
 }
