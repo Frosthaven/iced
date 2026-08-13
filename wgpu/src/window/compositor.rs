@@ -95,6 +95,25 @@ impl Compositor {
                 } else {
                     wgpu::InstanceFlags::empty()
                 },
+                // Per-backend options from the ENVIRONMENT, not the bare defaults.
+                //
+                // Every field's env default IS the value `Default` gives, so this
+                // changes nothing unless an operator asks for something. What it
+                // buys is the one option a caller cannot otherwise reach:
+                // `WGPU_DX12_PRESENTATION_SYSTEM=DxgiFromVisual`, which presents
+                // through a DirectComposition visual instead of straight from the
+                // HWND.
+                //
+                // That is the only supported route to per-pixel window alpha on
+                // Windows. A `CreateSwapChainForHwnd` surface reports
+                // `composite_alpha_modes = [Opaque]` and nothing else, so the
+                // alpha choice below always falls through to `Auto`, and such a
+                // window is translucent only because DWM happens to honour the
+                // alpha channel of its redirection surface -- which stops the
+                // moment the driver promotes the window onto its own hardware
+                // plane. A composition-visual surface reports `PostMultiplied`
+                // and `PreMultiplied`, which the choice below already prefers.
+                backend_options: wgpu::BackendOptions::from_env_or_default(),
                 ..Default::default()
             },
         )
@@ -182,6 +201,25 @@ impl Compositor {
                         } else {
                             wgpu::InstanceFlags::empty()
                         },
+                        // Per-backend options from the ENVIRONMENT, not the bare defaults.
+                        //
+                        // Every field's env default IS the value `Default` gives, so this
+                        // changes nothing unless an operator asks for something. What it
+                        // buys is the one option a caller cannot otherwise reach:
+                        // `WGPU_DX12_PRESENTATION_SYSTEM=DxgiFromVisual`, which presents
+                        // through a DirectComposition visual instead of straight from the
+                        // HWND.
+                        //
+                        // That is the only supported route to per-pixel window alpha on
+                        // Windows. A `CreateSwapChainForHwnd` surface reports
+                        // `composite_alpha_modes = [Opaque]` and nothing else, so the
+                        // alpha choice below always falls through to `Auto`, and such a
+                        // window is translucent only because DWM happens to honour the
+                        // alpha channel of its redirection surface -- which stops the
+                        // moment the driver promotes the window onto its own hardware
+                        // plane. A composition-visual surface reports `PostMultiplied`
+                        // and `PreMultiplied`, which the choice below already prefers.
+                        backend_options: wgpu::BackendOptions::from_env_or_default(),
                         ..Default::default()
                     },
                 )
