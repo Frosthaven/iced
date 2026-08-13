@@ -274,14 +274,34 @@ impl Compositor {
 
                 log::info!("Available alpha modes: {alpha_modes:#?}");
 
-                let preferred_alpha = if alpha_modes
-                    .contains(&wgpu::CompositeAlphaMode::PostMultiplied)
-                {
-                    wgpu::CompositeAlphaMode::PostMultiplied
-                } else if alpha_modes
-                    .contains(&wgpu::CompositeAlphaMode::PreMultiplied)
-                {
-                    wgpu::CompositeAlphaMode::PreMultiplied
+                // DXGI HAS NO STRAIGHT-ALPHA SWAPCHAIN, so DX12 must be asked
+                // for `PreMultiplied` first. `CreateSwapChainForComposition`
+                // accepts `DXGI_ALPHA_MODE_PREMULTIPLIED` or
+                // `DXGI_ALPHA_MODE_IGNORE` and nothing else, and wgpu maps
+                // `PostMultiplied` to `DXGI_ALPHA_MODE_STRAIGHT` -- which the
+                // DX12 backend nonetheless ADVERTISES for composition-visual
+                // surfaces. Preferring it there fails swapchain creation
+                // outright with `DXGI_ERROR_INVALID_CALL (0x887A0001)`, taking
+                // the whole surface configuration with it. Measured on a
+                // Windows 10 guest with `WGPU_DX12_PRESENTATION_SYSTEM=DxgiFromVisual`.
+                //
+                // Every other backend keeps the original order.
+                let dxgi = adapter.get_info().backend == wgpu::Backend::Dx12;
+                let (first, second) = if dxgi {
+                    (
+                        wgpu::CompositeAlphaMode::PreMultiplied,
+                        wgpu::CompositeAlphaMode::PostMultiplied,
+                    )
+                } else {
+                    (
+                        wgpu::CompositeAlphaMode::PostMultiplied,
+                        wgpu::CompositeAlphaMode::PreMultiplied,
+                    )
+                };
+                let preferred_alpha = if alpha_modes.contains(&first) {
+                    first
+                } else if alpha_modes.contains(&second) {
+                    second
                 } else {
                     wgpu::CompositeAlphaMode::Auto
                 };
