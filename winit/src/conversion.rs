@@ -1629,6 +1629,14 @@ pub fn resize_direction(
     }
 }
 
+/// An [`IconProvider`] no winit backend can read.
+///
+/// `winit_core::icon::Icon` is a `dyn IconProvider`, and every backend recovers
+/// the pixels with a CONCRETE `cast_ref::<RgbaIcon>()`, an `Any` downcast. A
+/// provider of any other type is therefore silently ignored: the X11 backend
+/// drops the creation-time attribute and, worse, treats a live
+/// `set_window_icon` as `None` and DELETES `_NET_WM_ICON`. This type is kept
+/// only because it is public API; nothing constructs it any more.
 #[derive(Debug)]
 pub struct RawImage(Vec<u8>, Size<u32>);
 impl IconProvider for RawImage {}
@@ -1641,9 +1649,15 @@ impl From<RawImage> for winit_core::icon::Icon {
 /// Converts some [`window::Icon`] into its `winit` counterpart.
 ///
 /// Returns `None` if there is an error during the conversion.
+///
+/// The result is a `winit_core::icon::RgbaIcon`, the one provider type the
+/// backends downcast to (see [`RawImage`] for what handing them anything else
+/// costs).
 pub fn icon(icon: window::Icon) -> Option<winit_core::icon::Icon> {
     let (pixels, size) = icon.into_raw();
-    Some(winit_core::icon::Icon::from(RawImage(pixels, size)))
+    winit_core::icon::RgbaIcon::new(pixels, size.width, size.height)
+        .ok()
+        .map(winit_core::icon::Icon::from)
 }
 
 /// Converts some [`input_method::Purpose`] into its `winit` counterpart.
